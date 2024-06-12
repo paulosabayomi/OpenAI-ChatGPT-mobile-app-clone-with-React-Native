@@ -1,118 +1,88 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
 
 import React from 'react';
-import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
-  ScrollView,
   StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
+  StatusBarStyle,
   View,
+  useColorScheme,
 } from 'react-native';
+import { CardStyleInterpolators, createStackNavigator } from '@react-navigation/stack';
+import Home from './components/routes/Home';
+import SettingsRoute from './components/routes/Settings';
+import useAppColor from './themed/appColor';
+import Icons from './assets/icons';
+import CameraPage from './components/routes/Camera';
+import storage from './shared/storage';
+import { APP_COLOR_MODE_KEY } from './assets/constants';
+import { useAppDispatch, useAppSelector } from './shared/hooks';
+import { setAppColorMode } from './shared/rdx-slice';
+import InputRoute from './components/routes/InputRoute';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const Stack = createStackNavigator();
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
+  const appColor = useAppColor();
+  const dispatch = useAppDispatch();
+  const app_color_mode = useAppSelector(state => state.main.app_mode)
+  const system_color_mode = useColorScheme() || 'light'
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+
+  const handleSetColorMode = React.useCallback(() => {
+    storage.load({key: APP_COLOR_MODE_KEY})
+    .then((data: any) => {
+      console.log("data data", data);
+      dispatch(setAppColorMode(data))
+    })
+    .catch((err: any) => {
+      dispatch(setAppColorMode("system"))
+    })
+  }, [])
+
+  React.useLayoutEffect(() => {
+    handleSetColorMode()
+  }, [])
 
   return (
-    <SafeAreaView style={backgroundStyle}>
+    <>
       <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+        barStyle={(app_color_mode == "system" ? system_color_mode : app_color_mode) == 'light' ? 'dark-content' : 'light-content'}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+    <Stack.Navigator>
+      <Stack.Screen name="Home" options={{headerShown: false}} component={Home} />
+      <Stack.Screen name="Settings" 
+        options={{
+          presentation: 'modal',
+          headerLeft: () => null,
+          headerStyle: {
+            backgroundColor: appColor.page_modal_bg
+          },
+          headerShadowVisible: false,
+          
+        }} 
+        component={SettingsRoute} />
+      <Stack.Screen name="Camera" 
+        options={{presentation: 'card', 
+        cardStyle: {
+          height: "50%"
+        },
+        headerShown: false,
+        gestureDirection: "vertical",
+        cardStyleInterpolator: CardStyleInterpolators.forVerticalIOS
+      }} 
+        component={CameraPage} />
+      <Stack.Screen name="InputRoute" component={InputRoute} 
+        options={{
+          headerShown: false,
+          presentation: 'modal'
+        }}
+      />
+    </Stack.Navigator>
+    </>
   );
 }
 
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
 
 export default App;
